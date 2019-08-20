@@ -3,7 +3,7 @@ from random import sample, random
 import matplotlib.pyplot as plt
 
 n_steps = 50
-n_nodes = 500
+n_nodes = 5
 k_nearest = 4
 p_reconnect = 1
 beta = 0.3  # infection probability
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     for n in sample(host_nw.nodes, n_seeds):
         host_nw.nodes[n]['status'] = 'i'
         host_nw.nodes[n]['next_status'] = 'i'
-    # print(network.nodes.data())
+    print(host_nw.nodes.data())
     S = [n_nodes - n_seeds]
     I = [n_seeds]
     R = [0]
@@ -47,7 +47,7 @@ if __name__ == '__main__':
             host_nw.nodes[i]['next_status'] = check_recovery()
             # get the neighbour susceptible nodes
             susceptible_nodes = [n for n in host_nw.adj[i] if host_nw.nodes[n]['status'] == 's']
-            print(susceptible_nodes)
+            # print(susceptible_nodes)
             for s in susceptible_nodes:
                 host_nw.nodes[s]['next_status'] = check_infection()
         # apply the status update simultaneously
