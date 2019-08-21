@@ -3,7 +3,7 @@ from random import sample, random
 import matplotlib.pyplot as plt
 
 n_steps = 50
-n_nodes = 5
+n_nodes = 500
 k_nearest = 4
 p_reconnect = 1
 beta = 0.3  # infection probability
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     S = [n_nodes - n_seeds]
     I = [n_seeds]
     R = [0]
-    for t in range(n_steps):
+    for t in range(1, n_steps):
         # get the infectious nodes
         infectious_nodes = [n for n, v in host_nw.nodes.items() if v['status'] == 'i']
         # infectious nodes recover or/and infect others
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         I.append(len(infectious_nodes))
         R.append(len(recovered_nodes))
     # plot
-    steps = range(n_steps + 1)
+    steps = range(n_steps)
     plt.plot(steps, S, 'b', label='S')
     plt.plot(steps, I, 'r', label='I')
     plt.plot(steps, R, 'g', label='R')

@@ -3,16 +3,16 @@ from random import sample, random, choice
 import matplotlib.pyplot as plt
 
 # constants
-N_STEPS = 3
-N_NODES = 5
-K_NEAREST = 2
-P_RECONNECT = 1
-BETA = 0.3  # infection probability
-GAMMA = 0.02  # cross-immunity
-MU = 0.3  # recovery probability
-SIGMA = 0.1  # immunity lost probability
+N_STEPS = 500
+N_NODES = 500
+K_NEAREST = 12
+P_RECONNECT = 0
+BETA = 0.25  # infection probability
+GAMMA = 2  # cross-immunity
+MU = 0.14  # recovery probability
+SIGMA = 0.043  # immunity lost probability
 N_LOCI = 2
-N_SEEDS = 2
+N_SEEDS = 50
 
 
 def generate_strain_space(n_loci):
@@ -31,7 +31,7 @@ def check_immunity_lost(node, current_memory):
     for strain in current_memory:
         if random() < SIGMA:
             lost.add(strain)
-            print('node', node, 'loses', strain)
+            # print('node', node, 'loses', strain)
     return lost
 
 
@@ -40,7 +40,7 @@ def check_recovery(node, current_infection):
     for strain in current_infection:
         if random() < MU:
             recovered.add(strain)
-            print('node', node, 'recovered from', strain)
+            # print('node', node, 'recovered from', strain)
     return recovered
 
 
@@ -78,12 +78,22 @@ def infect_adjacent(network, node):
         if random() < p_infect:
             # add infecting strain to adj's newly_infected set
             network.nodes[adj]['newly_infected'].add(infect_strain)
-            print('node', node, 'infects node', adj, 'with', infect_strain)
+            # print('node', node, 'infects node', adj, 'with', infect_strain)
 
 
 def print_network(network):
     for n, v in network.nodes.items():
         print(n, v)
+
+
+def record_host_immune(network, host_immune):
+    for immune_record in host_immune.values():
+        immune_record.append(0)
+    for n, v in network.nodes.items():
+        for strain in v['current_memory']:
+            host_immune[strain][-1] += 1
+    for immune_record in host_immune.values():
+        immune_record[-1] = immune_record[-1] / N_NODES
 
 
 def main():
@@ -108,16 +118,25 @@ def main():
     strain_space = generate_strain_space(N_LOCI)
     print('strain space:', strain_space)
 
+    # initialize population record
+    host_immune = {}
+    for strain in strain_space:
+        host_immune[strain] = []
+
     # seeding
     for n in sample(host_nw.nodes, N_SEEDS):
         seeded_strain = choice(strain_space)
         host_nw.nodes[n]['current_infection'].add(seeded_strain)
-    print('step 0 (seeding)')
-    print_network(host_nw)
+    # print('step 0 (seeding)')
+    # print_network(host_nw)
+
+    # record strain population of step 0
+    record_host_immune(host_nw, host_immune)
+    print(host_immune)
 
     # simulate
     for t in range(1, N_STEPS):
-        print('step', t)
+        # print('step', t)
 
         # records infection and memory changes in temporary data fields for each node
         for n, v in host_nw.nodes.items():
@@ -135,8 +154,8 @@ def main():
             # check infection
             infect_adjacent(host_nw, n)
 
-        print('before update:')
-        print_network(host_nw)
+        # print('before update:')
+        # print_network(host_nw)
 
         # apply change records and reset the temporary hold fields
         for n, v in host_nw.nodes.items():
@@ -150,8 +169,20 @@ def main():
             v['newly_recovered'] = set()
             v['newly_infected'] = set()
 
-        print('after update:')
-        print_network(host_nw)
+        # print('after update:')
+        # print_network(host_nw)
+
+        record_host_immune(host_nw, host_immune)
+        # print(population)
+
+    # calculate
+    steps = range(N_STEPS)
+    for strain, host_immune_record in host_immune.items():
+        plt.plot(steps, host_immune_record, label=strain)
+    plt.legend()
+    plt.xlabel('Time steps')
+    plt.ylabel('Hosts immune to a strain')
+    plt.show()
 
 
 if __name__ == '__main__':
