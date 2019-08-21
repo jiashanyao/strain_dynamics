@@ -2,16 +2,17 @@ import networkx as nx
 from random import sample, random, choice
 import matplotlib.pyplot as plt
 
-n_steps = 50
-n_nodes = 10
-k_nearest = 4
-p_reconnect = 1
-beta = 0.3  # infection probability
-gamma = 0.02  # cross-immunity
-mu = 0.3  # recovery probability
-sigma = 0.1  # immunity lost probability
-n_loci = 3
-n_seeds = 4
+# constants
+N_STEPS = 3
+N_NODES = 5
+K_NEAREST = 2
+P_RECONNECT = 1
+BETA = 0.3  # infection probability
+GAMMA = 0.02  # cross-immunity
+MU = 0.3  # recovery probability
+SIGMA = 0.1  # immunity lost probability
+N_LOCI = 2
+N_SEEDS = 2
 
 
 def generate_strain_space(n_loci):
@@ -25,19 +26,21 @@ def generate_strain_space(n_loci):
     return strain_space
 
 
-def check_immunity_lost(current_memory):
+def check_immunity_lost(node, current_memory):
     lost = set()
     for strain in current_memory:
-        if random() < sigma:
+        if random() < SIGMA:
             lost.add(strain)
+            print('node', node, 'loses', strain)
     return lost
 
 
-def check_recovery(current_infection):
+def check_recovery(node, current_infection):
     recovered = set()
     for strain in current_infection:
-        if random() < mu:
+        if random() < MU:
             recovered.add(strain)
+            print('node', node, 'recovered from', strain)
     return recovered
 
 
@@ -50,7 +53,7 @@ def calc_bit_fraction(memory, infect_strain):
                 identical_bits += 1
                 break
         i += 1
-    return identical_bits/n_loci
+    return identical_bits / N_LOCI
 
 
 def infect_adjacent(network, node):
@@ -68,18 +71,26 @@ def infect_adjacent(network, node):
         # calculate probability
         adj_memory = network.nodes[adj]['current_memory']
         bit_fraction = calc_bit_fraction(adj_memory, infect_strain)
-        vulnerability = (1 - bit_fraction ** (1/gamma)) ** gamma
-        p_infect = beta * vulnerability
+        vulnerability = (1 - bit_fraction ** (1 / GAMMA)) ** GAMMA
+        p_infect = BETA * vulnerability
 
         # start infecting
         if random() < p_infect:
             # add infecting strain to adj's newly_infected set
             network.nodes[adj]['newly_infected'].add(infect_strain)
+            print('node', node, 'infects node', adj, 'with', infect_strain)
 
 
-if __name__ == '__main__':
+def print_network(network):
+    for n, v in network.nodes.items():
+        print(n, v)
+
+
+def main():
     # generate host contact network
-    host_nw = nx.connected_watts_strogatz_graph(n_nodes, k_nearest, p_reconnect)
+    host_nw = nx.connected_watts_strogatz_graph(N_NODES, K_NEAREST, P_RECONNECT)
+    # nx.draw(host_nw, with_labels=True)
+    # plt.show()
 
     # data structure setting
     for n, v in host_nw.nodes.items():
@@ -89,23 +100,24 @@ if __name__ == '__main__':
         v['current_infection'] = set()
 
         # data fields for recording changes in host properties
-        v['next_memory'] = set()
+        v['newly_lost'] = set()
         v['newly_infected'] = set()
         v['newly_recovered'] = set()
 
     # generate strain space
-    strain_space = generate_strain_space(n_loci)
-    # print(strain_space)
+    strain_space = generate_strain_space(N_LOCI)
+    print('strain space:', strain_space)
 
     # seeding
-    for n in sample(host_nw.nodes, n_seeds):
+    for n in sample(host_nw.nodes, N_SEEDS):
         seeded_strain = choice(strain_space)
         host_nw.nodes[n]['current_infection'].add(seeded_strain)
-        host_nw.nodes[n]['current_memory'].add(seeded_strain)
-    print(host_nw.nodes.data())
+    print('step 0 (seeding)')
+    print_network(host_nw)
 
     # simulate
-    for t in range(n_steps):
+    for t in range(1, N_STEPS):
+        print('step', t)
 
         # records infection and memory changes in temporary data fields for each node
         for n, v in host_nw.nodes.items():
@@ -115,23 +127,32 @@ if __name__ == '__main__':
                 continue
 
             # check immunity lost
-            v['next_memory'] = check_immunity_lost(v['current_memory'])
+            v['newly_lost'] = check_immunity_lost(n, v['current_memory'])
 
             # check recovery
-            v['newly_recovered'] = check_recovery(v['current_infection'])
+            v['newly_recovered'] = check_recovery(n, v['current_infection'])
 
             # check infection
             infect_adjacent(host_nw, n)
+
+        print('before update:')
+        print_network(host_nw)
 
         # apply change records and reset the temporary hold fields
         for n, v in host_nw.nodes.items():
 
             # apply changes
-            v['current_memory'] = v['next_memory']  # shallow copy as next_memory will be assigned with a new object
-            v['current_infection'] = v['current_infection'] - v['newly_recovered']
-            v['current_infection'] = v['current_infection'] | v['newly_infected']
+            v['current_memory'] = (v['current_memory'] - v['newly_lost']) | v['newly_recovered']
+            v['current_infection'] = (v['current_infection'] - v['newly_recovered']) | v['newly_infected']
 
             # reset temporary hold fields
-            v['new_memory'] = set()
+            v['newly_lost'] = set()
             v['newly_recovered'] = set()
             v['newly_infected'] = set()
+
+        print('after update:')
+        print_network(host_nw)
+
+
+if __name__ == '__main__':
+    main()
