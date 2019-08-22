@@ -169,8 +169,8 @@ def main():
         # apply change records and reset the temporary hold fields
         for n, v in host_nw.nodes.items():
             # apply changes
-            v['current_memory'] = (v['current_memory'] - v['newly_lost']) | v['newly_recovered']
-            v['current_infection'] = (v['current_infection'] - v['newly_recovered']) | v['newly_infected']
+            v['current_memory'] = (v['current_memory'] | v['newly_recovered']) - v['newly_lost']
+            v['current_infection'] = (v['current_infection'] | v['newly_infected']) - v['newly_recovered']
             # reset temporary hold fields
             v['newly_lost'] = set()
             v['newly_recovered'] = set()
