@@ -8,9 +8,10 @@ N_NODES = 250
 K_NEAREST = 12
 P_RECONNECT = 1
 BETA = 0.25  # infection probability
-GAMMA = 4  # cross-immunity
+GAMMA = 0.95  # cross-immunity
 MU = 0.14  # recovery probability
 SIGMA = 0.043  # immunity lost probability
+R = 0.1     # recombination probability per allele
 N_LOCI = 2
 N_SEEDS = 16
 
@@ -56,6 +57,19 @@ def calc_bit_fraction(memory, infect_strain):
     return identical_bits / N_LOCI
 
 
+def recombine(in1, in2):
+    strain1 = list(in1)
+    strain2 = list(in2)
+    for i in range(N_LOCI):
+        if random() < R:
+            tmp = strain1[i]
+            strain1[i] = strain2[i]
+            strain2[i] = tmp
+    out1 = ''.join(strain1)
+    out2 = ''.join(strain2)
+    return [out1, out2]
+
+
 def infect_adjacent(network, node):
     if len(network.nodes[node]['current_infection']) == 0:
         return  # skip node that has no infection
@@ -76,9 +90,18 @@ def infect_adjacent(network, node):
 
         # start infecting
         if random() < p_infect:
-            # add infecting strain to adj's newly_infected set
-            network.nodes[adj]['newly_infected'].add(infect_strain)
-            # print('node', node, 'infects node', adj, 'with', infect_strain)
+            if len(network.nodes[adj]['current_infection']):
+                # if adj has current infection, do possible recombination
+                strain1 = set(network.nodes[adj]['current_infection']).pop()
+                strain2 = infect_strain
+                recombine_output = recombine(strain1, strain2)
+                network.nodes[adj]['newly_infected'].update(recombine_output)
+            else:
+                # else no recombination
+                network.nodes[adj]['newly_infected'].add(infect_strain)
+                # print('node', node, 'infects node', adj, 'with', infect_strain)
+
+
 
 
 def print_network(network):
