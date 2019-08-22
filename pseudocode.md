@@ -1,0 +1,21 @@
+- generate host contact network
+- generate the strain space
+- seed a portion of hosts with random strains from the strain space
+- for each time step
+    - for each host
+        - host.newly_lost = strain immunity lost from host.current_memory
+        - host.newly_recovered = strains the host recovered from host.current_infection
+        - for each adjacent adj of host
+            - set_difference = host.current_infection - adj.current_infection
+            - if set_difference is empty
+                - continue
+            - strain = set_difference.pop()
+            - calculate probability based on p = beta * v
+            - if random() < p
+                - adj.newly_infected.add(strain)
+    - for each host
+        - host.current_memory = host.current_memory - host.newly_lost | host.newly_recovered
+        - host.current_infection = host.current_infection - host.newly_recovered | host.newly_infected
+        - host.newly_lost = new set
+        - host.newly_recovered = new set
+        - host.newly_infected = new set
