@@ -1,6 +1,7 @@
 import networkx as nx
 from random import sample, random, choice
 import matplotlib.pyplot as plt
+import math
 
 # constants
 N_STEPS = 2000
@@ -8,10 +9,11 @@ N_NODES = 250
 K_NEAREST = 12
 P_RECONNECT = 1
 BETA = 0.25  # infection probability
-GAMMA = 0.95  # cross-immunity
+GAMMA = 2  # cross-immunity
 MU = 0.14  # recovery probability
 SIGMA = 0.043  # immunity lost probability
 R = 0.1     # recombination probability per allele
+TAO = 0.1     # mutation probability per allele
 N_LOCI = 2
 N_SEEDS = 16
 
@@ -57,17 +59,32 @@ def calc_bit_fraction(memory, infect_strain):
     return identical_bits / N_LOCI
 
 
-def recombine(in1, in2):
-    strain1 = list(in1)
-    strain2 = list(in2)
+def recombine(strain1, strain2):
+    char_list1 = list(strain1)
+    char_list2 = list(strain2)
     for i in range(N_LOCI):
         if random() < R:
-            tmp = strain1[i]
-            strain1[i] = strain2[i]
-            strain2[i] = tmp
-    out1 = ''.join(strain1)
-    out2 = ''.join(strain2)
-    return [out1, out2]
+            tmp = char_list1[i]
+            char_list1[i] = char_list2[i]
+            char_list2[i] = tmp
+    strain1 = ''.join(char_list1)
+    strain2 = ''.join(char_list2)
+    return strain1, strain2
+
+
+def mutate(allele):
+    if allele == '0':
+        return '1'
+    else:
+        return '0'
+
+
+def check_mutation(strain):
+    char_list = list(strain)
+    for i in range(N_LOCI):
+        if random() < TAO:
+            char_list[i] = mutate(char_list[i])
+    return ''.join(char_list)
 
 
 def infect_adjacent(network, node):
@@ -80,28 +97,26 @@ def infect_adjacent(network, node):
         if len(infection_diff) == 0:
             continue
         # arbitrarily select a strain from the strain difference
-        infect_strain = infection_diff.pop()
+        infecting_strain = infection_diff.pop()
 
         # calculate probability
         adj_memory = network.nodes[adj]['current_memory']
-        bit_fraction = calc_bit_fraction(adj_memory, infect_strain)
+        bit_fraction = calc_bit_fraction(adj_memory, infecting_strain)
         vulnerability = (1 - bit_fraction ** (1 / GAMMA)) ** GAMMA
         p_infect = BETA * vulnerability
 
-        # start infecting
+        # try infecting
         if random() < p_infect:
+            infecting_strain = check_mutation(infecting_strain)
             if len(network.nodes[adj]['current_infection']):
                 # if adj has current infection, do possible recombination
-                strain1 = set(network.nodes[adj]['current_infection']).pop()
-                strain2 = infect_strain
-                recombine_output = recombine(strain1, strain2)
+                infected_strain = set(network.nodes[adj]['current_infection']).pop()
+                recombine_output = recombine(infected_strain, infecting_strain)
                 network.nodes[adj]['newly_infected'].update(recombine_output)
             else:
                 # else no recombination
-                network.nodes[adj]['newly_infected'].add(infect_strain)
-                # print('node', node, 'infects node', adj, 'with', infect_strain)
-
-
+                network.nodes[adj]['newly_infected'].add(infecting_strain)
+                # print('node', node, 'infects node', adj, 'with', infecting_strain)
 
 
 def print_network(network):
@@ -117,6 +132,35 @@ def record_host_immune(network, host_immune):
             host_immune[strain][-1] += 1
     for immune_record in host_immune.values():
         immune_record[-1] = immune_record[-1] / N_NODES
+
+
+def calc_diversity(strain_freq):
+    entropy = 0
+    for freq in strain_freq.values():
+        if freq != 0:
+            entropy += freq * math.log(1 / freq)
+    diversity = entropy / math.log(len(strain_freq))
+    return diversity
+
+
+def hamming_dist(strain1, strain2):
+    distance = 0
+    for i in range(N_LOCI):
+        if strain1[i] != strain2[i]:
+            distance += 1
+    return distance
+
+
+def calc_discordance(strain_freq):
+    numerator = 0
+    denominator = 0
+    for strain1, freq1 in strain_freq.items():
+        for strain2, freq2 in strain_freq.items():
+            if strain1 != strain2:
+                numerator += hamming_dist(strain1, strain2) * freq1 * freq2
+                denominator += freq1 * freq2
+    discordance = numerator / denominator / N_LOCI
+    return discordance
 
 
 def main():
@@ -135,7 +179,7 @@ def main():
 
     # generate strain space
     strain_space = generate_strain_space(N_LOCI)
-    print('strain space:', strain_space)
+    # print('strain space:', strain_space)
 
     # initialize population record
     host_immune = {}
@@ -146,6 +190,7 @@ def main():
     for n in sample(host_nw.nodes, N_SEEDS):
         seeded_strain = choice(strain_space)
         host_nw.nodes[n]['current_infection'].add(seeded_strain)
+        print('seeded', seeded_strain)
 
     # print('step 0 (seeding)')
     # print_network(host_nw)
