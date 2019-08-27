@@ -3,20 +3,6 @@ from random import sample, random, choice
 import matplotlib.pyplot as plt
 import math
 
-# constants
-N_STEPS = 2000
-N_NODES = 250
-K_NEAREST = 12
-P_RECONNECT = 1
-BETA = 0.25  # infection probability
-GAMMA = 2  # cross-immunity
-MU = 0.14  # recovery probability
-SIGMA = 0.043  # immunity lost probability
-R = 0.1     # recombination probability per allele
-TAO = 0.1     # mutation probability per allele
-N_LOCI = 2
-N_SEEDS = 16
-
 
 def generate_strain_space(n_loci):
     strain_space = ['']
@@ -29,25 +15,25 @@ def generate_strain_space(n_loci):
     return strain_space
 
 
-def check_immunity_lost(node, current_memory):
+def check_immunity_lost(node, current_memory, sigma):
     lost = set()
     for strain in current_memory:
-        if random() < SIGMA:
+        if random() < sigma:
             lost.add(strain)
             # print('node', node, 'loses', strain)
     return lost
 
 
-def check_recovery(node, current_infection):
+def check_recovery(node, current_infection, mu):
     recovered = set()
     for strain in current_infection:
-        if random() < MU:
+        if random() < mu:
             recovered.add(strain)
             # print('node', node, 'recovered from', strain)
     return recovered
 
 
-def calc_bit_fraction(memory, infect_strain):
+def calc_bit_fraction(memory, infect_strain, n_loci):
     i = 0
     identical_bits = 0
     for bit in infect_strain:
@@ -56,14 +42,14 @@ def calc_bit_fraction(memory, infect_strain):
                 identical_bits += 1
                 break
         i += 1
-    return identical_bits / N_LOCI
+    return identical_bits / n_loci
 
 
-def recombine(strain1, strain2):
+def recombine(strain1, strain2, n_loci, r):
     char_list1 = list(strain1)
     char_list2 = list(strain2)
-    for i in range(N_LOCI):
-        if random() < R:
+    for i in range(n_loci):
+        if random() < r:
             tmp = char_list1[i]
             char_list1[i] = char_list2[i]
             char_list2[i] = tmp
@@ -79,15 +65,15 @@ def mutate(allele):
         return '0'
 
 
-def check_mutation(strain):
+def check_mutation(strain, n_loci, tao):
     char_list = list(strain)
-    for i in range(N_LOCI):
-        if random() < TAO:
+    for i in range(n_loci):
+        if random() < tao:
             char_list[i] = mutate(char_list[i])
     return ''.join(char_list)
 
 
-def infect_adjacent(network, node):
+def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
     if len(network.nodes[node]['current_infection']) == 0:
         return  # skip node that has no infection
     for adj in network.adj[node]:
@@ -101,17 +87,17 @@ def infect_adjacent(network, node):
 
         # calculate probability
         adj_memory = network.nodes[adj]['current_memory']
-        bit_fraction = calc_bit_fraction(adj_memory, infecting_strain)
-        vulnerability = (1 - bit_fraction ** (1 / GAMMA)) ** GAMMA
-        p_infect = BETA * vulnerability
+        bit_fraction = calc_bit_fraction(adj_memory, infecting_strain, n_loci)
+        vulnerability = (1 - bit_fraction ** (1 / gamma)) ** gamma
+        p_infect = beta * vulnerability
 
         # try infecting
         if random() < p_infect:
-            infecting_strain = check_mutation(infecting_strain)
+            infecting_strain = check_mutation(infecting_strain, n_loci, tao)
             if len(network.nodes[adj]['current_infection']):
                 # if adj has current infection, do possible recombination
                 infected_strain = set(network.nodes[adj]['current_infection']).pop()
-                recombine_output = recombine(infected_strain, infecting_strain)
+                recombine_output = recombine(infected_strain, infecting_strain, n_loci, r)
                 network.nodes[adj]['newly_infected'].update(recombine_output)
             else:
                 # else no recombination
@@ -124,14 +110,14 @@ def print_network(network):
         print(n, v)
 
 
-def record_host_immune(network, host_immune):
+def record_host_immune(network, host_immune, n_nodes):
     for immune_record in host_immune.values():
         immune_record.append(0)
     for n, v in network.nodes.items():
         for strain in v['current_memory']:
             host_immune[strain][-1] += 1
     for immune_record in host_immune.values():
-        immune_record[-1] = immune_record[-1] / N_NODES
+        immune_record[-1] = immune_record[-1] / n_nodes
 
 
 def calc_diversity(strain_freq):
@@ -143,29 +129,30 @@ def calc_diversity(strain_freq):
     return diversity
 
 
-def hamming_dist(strain1, strain2):
+def hamming_dist(strain1, strain2, n_loci):
     distance = 0
-    for i in range(N_LOCI):
+    for i in range(n_loci):
         if strain1[i] != strain2[i]:
             distance += 1
     return distance
 
 
-def calc_discordance(strain_freq):
+def calc_discordance(strain_freq, n_loci):
     numerator = 0
     denominator = 0
     for strain1, freq1 in strain_freq.items():
         for strain2, freq2 in strain_freq.items():
             if strain1 != strain2:
-                numerator += hamming_dist(strain1, strain2) * freq1 * freq2
+                numerator += hamming_dist(strain1, strain2, n_loci) * freq1 * freq2
                 denominator += freq1 * freq2
-    discordance = numerator / denominator / N_LOCI
+    discordance = numerator / denominator / n_loci
     return discordance
 
 
-def main():
+def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_seeds, n_steps):
+
     # generate host contact network
-    host_nw = nx.connected_watts_strogatz_graph(N_NODES, K_NEAREST, P_RECONNECT)
+    host_nw = nx.connected_watts_strogatz_graph(n_nodes, contacts_per_host, randomness)
     # nx.draw(host_nw, with_labels=True)
     # plt.show()
 
@@ -178,7 +165,7 @@ def main():
         v['newly_recovered'] = set()    # temporary hold for newly recovered strains
 
     # generate strain space
-    strain_space = generate_strain_space(N_LOCI)
+    strain_space = generate_strain_space(n_loci)
     # print('strain space:', strain_space)
 
     # initialize population record
@@ -187,7 +174,7 @@ def main():
         host_immune[strain] = []
 
     # seeding
-    for n in sample(host_nw.nodes, N_SEEDS):
+    for n in sample(host_nw.nodes, n_seeds):
         seeded_strain = choice(strain_space)
         host_nw.nodes[n]['current_infection'].add(seeded_strain)
         print('seeded', seeded_strain)
@@ -196,17 +183,17 @@ def main():
     # print_network(host_nw)
 
     # record strain population of step 0
-    record_host_immune(host_nw, host_immune)
+    record_host_immune(host_nw, host_immune, n_nodes)
 
     # simulate
-    for t in range(1, N_STEPS):
+    for t in range(1, n_steps):
         # print('step', t)
 
         # records infection and memory changes in temporary data fields for each node
         for n, v in host_nw.nodes.items():
-            v['newly_lost'] = check_immunity_lost(n, v['current_memory'])
-            v['newly_recovered'] = check_recovery(n, v['current_infection'])
-            infect_adjacent(host_nw, n)
+            v['newly_lost'] = check_immunity_lost(n, v['current_memory'], sigma)
+            v['newly_recovered'] = check_recovery(n, v['current_infection'], mu)
+            infect_adjacent(host_nw, n, n_loci, gamma, beta, tao, r)
 
         # print('before update:')
         # print_network(host_nw)
@@ -224,10 +211,10 @@ def main():
         # print('after update:')
         # print_network(host_nw)
 
-        record_host_immune(host_nw, host_immune)
+        record_host_immune(host_nw, host_immune, n_nodes)
 
     # plot
-    steps = range(N_STEPS)
+    steps = range(n_steps)
     for strain, host_immune_record in host_immune.items():
         plt.plot(steps, host_immune_record, label=strain)
     plt.legend()
@@ -237,4 +224,18 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # constants
+    CONTACTS_PER_HOST = 12
+    MU = 0.14  # recovery probability
+    SIGMA = 0.043  # immunity lost probability
+    BETA = 0.25  # infection probability
+    R = 0.1  # recombination probability per allele
+    TAO = 0.004  # mutation probability per allele
+    GAMMA = 4  # cross-immunity
+    N_LOCI = 2
+    N_NODES = 250
+    RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
+    N_SEEDS = 16
+    N_STEPS = 2000
+    parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES, RANDOMNESS]
+    simulate(*parameters, N_SEEDS, N_STEPS)
