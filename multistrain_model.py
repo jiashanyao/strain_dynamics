@@ -150,6 +150,18 @@ def calc_discordance(strain_freq, n_loci):
 
 
 def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_seeds, n_steps):
+    print('contacts_per_host', contacts_per_host)
+    print('mu', mu)
+    print('sigma', sigma)
+    print('beta', beta)
+    print('r', r)
+    print('tao', tao)
+    print('gamma', gamma)
+    print('n_loci', n_loci)
+    print('n_nodes', n_nodes)
+    print('randomness', randomness)
+    print('n_seeds', n_seeds)
+    print('n_steps', n_steps)
 
     # generate host contact network
     host_nw = nx.connected_watts_strogatz_graph(n_nodes, contacts_per_host, randomness)
@@ -177,7 +189,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     for n in sample(host_nw.nodes, n_seeds):
         seeded_strain = choice(strain_space)
         host_nw.nodes[n]['current_infection'].add(seeded_strain)
-        print('seeded', seeded_strain)
+        # print('seeded', seeded_strain)
 
     # print('step 0 (seeding)')
     # print_network(host_nw)
@@ -237,5 +249,5 @@ if __name__ == '__main__':
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
     N_SEEDS = 16
     N_STEPS = 2000
-    parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES, RANDOMNESS]
-    simulate(*parameters, N_SEEDS, N_STEPS)
+    parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
+    simulate(*parameters, RANDOMNESS, N_SEEDS, N_STEPS)
