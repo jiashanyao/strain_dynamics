@@ -157,7 +157,7 @@ def seed(network, n_seeds, strain):
         print('seeded', node, 'with', strain)
 
 
-def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps, manual_mode):
+def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps, seed_sequence=None):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
@@ -181,6 +181,10 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         v['newly_infected'] = set()     # temporary hold for newly infected strains
         v['newly_recovered'] = set()    # temporary hold for newly recovered strains
 
+    # if seed_sequence is provided, overwrite the n_loci with the provided strain length
+    if seed_sequence:
+        n_loci = len(seed_sequence[0][1])
+
     # generate strain space
     strain_space = generate_strain_space(n_loci)
 
@@ -189,14 +193,11 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     for strain in strain_space:
         host_immune[strain] = []
 
-    # seeding
-    if not manual_mode:
+    # default seeding if seed_sequence is not provided
+    if not seed_sequence:
         # seed each strain in strain space to a host
         for strain_seed in strain_space:
             seed(host_nw, 1, strain_seed)
-    else:
-        # seed whatever you want
-        seed(host_nw, 1, '00')
 
     # print('step 0')
     # print_network(host_nw)
@@ -209,10 +210,10 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         # print('step', t)
 
         # if in manual mode, seed another strain to the community at some time step
-        if manual_mode:
-            if t == 100:
-                seed(host_nw, 1, '01')
-                pass
+        if seed_sequence:
+            if t == seed_sequence[0][0]:
+                seed(host_nw, 1, seed_sequence[0][1])
+                seed_sequence.pop(0)
 
         # records infection and memory changes in temporary data fields for each node
         for n, v in host_nw.nodes.items():
@@ -257,9 +258,9 @@ if __name__ == '__main__':
     R = 0.0  # recombination probability per allele
     TAO = 0.000  # mutation probability per allele
     GAMMA = 3  # cross-immunity
-    N_LOCI = 2
+    N_LOCI = 3
     N_NODES = 200
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-    N_STEPS = 1000
+    N_STEPS = 2000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    simulate(*parameters, RANDOMNESS, N_STEPS, manual_mode=True)
+    simulate(*parameters, RANDOMNESS, N_STEPS, [[1,'00'], [200,'01']])

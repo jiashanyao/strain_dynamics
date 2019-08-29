@@ -44,4 +44,4 @@ for sample in parameter_sample_list:
     sample[7] = int(round(sample[7]))
     sample[8] = int(round(sample[8]))
 # simulate
-simulate(*parameter_sample_list[0], RANDOMNESS, N_STEPS, manual_mode=False)
+simulate(*parameter_sample_list[0], RANDOMNESS, N_STEPS)
