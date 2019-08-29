@@ -149,7 +149,15 @@ def calc_discordance(strain_freq, n_loci):
     return discordance
 
 
-def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_seeds, n_steps):
+def seed(network, n_seeds, strain):
+    candidates = [n for n, v in network.nodes.items() if strain not in v['current_infection']]
+    sampled_nodes = sample(candidates, n_seeds)
+    for node in sampled_nodes:
+        network.nodes[node]['current_infection'].add(strain)
+        print('seeded', node, 'with', strain)
+
+
+def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps, manual_mode):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
@@ -160,13 +168,10 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     print('n_loci', n_loci)
     print('n_nodes', n_nodes)
     print('randomness', randomness)
-    print('n_seeds', n_seeds)
     print('n_steps', n_steps)
 
     # generate host contact network
     host_nw = nx.connected_watts_strogatz_graph(n_nodes, contacts_per_host, randomness)
-    # nx.draw(host_nw, with_labels=True)
-    # plt.show()
 
     # data field setting
     for n, v in host_nw.nodes.items():
@@ -178,7 +183,6 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
     # generate strain space
     strain_space = generate_strain_space(n_loci)
-    # print('strain space:', strain_space)
 
     # initialize population record
     host_immune = {}
@@ -186,12 +190,15 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         host_immune[strain] = []
 
     # seeding
-    for n in sample(host_nw.nodes, n_seeds):
-        seeded_strain = choice(strain_space)
-        host_nw.nodes[n]['current_infection'].add(seeded_strain)
-        # print('seeded', seeded_strain)
+    if not manual_mode:
+        # seed each strain in strain space to a host
+        for strain_seed in strain_space:
+            seed(host_nw, 1, strain_seed)
+    else:
+        # seed whatever you want
+        seed(host_nw, 1, '00')
 
-    # print('step 0 (seeding)')
+    # print('step 0')
     # print_network(host_nw)
 
     # record strain population of step 0
@@ -200,6 +207,12 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     # simulate
     for t in range(1, n_steps):
         # print('step', t)
+
+        # if in manual mode, seed another strain to the community at some time step
+        if manual_mode:
+            if t == 100:
+                seed(host_nw, 1, '01')
+                pass
 
         # records infection and memory changes in temporary data fields for each node
         for n, v in host_nw.nodes.items():
@@ -237,17 +250,16 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
 if __name__ == '__main__':
     # constants
-    CONTACTS_PER_HOST = 12
+    CONTACTS_PER_HOST = 10
     MU = 0.14  # recovery probability
-    SIGMA = 0.043  # immunity lost probability
-    BETA = 0.25  # infection probability
-    R = 0.1  # recombination probability per allele
-    TAO = 0.004  # mutation probability per allele
-    GAMMA = 4  # cross-immunity
+    SIGMA = 0.03  # immunity lost probability
+    BETA = 0.2  # infection probability
+    R = 0.0  # recombination probability per allele
+    TAO = 0.000  # mutation probability per allele
+    GAMMA = 3  # cross-immunity
     N_LOCI = 2
-    N_NODES = 250
+    N_NODES = 200
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-    N_SEEDS = 16
-    N_STEPS = 2000
+    N_STEPS = 1000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    simulate(*parameters, RANDOMNESS, N_SEEDS, N_STEPS)
+    simulate(*parameters, RANDOMNESS, N_STEPS, manual_mode=True)

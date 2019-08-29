@@ -16,7 +16,6 @@ N_NODES = [100, 500]
 
 # fixed parameters
 RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-N_SEEDS = 16
 N_STEPS = 2000
 
 # create multi-dimension parameter space
@@ -45,4 +44,4 @@ for sample in parameter_sample_list:
     sample[7] = int(round(sample[7]))
     sample[8] = int(round(sample[8]))
 # simulate
-simulate(*parameter_sample_list[0], RANDOMNESS, N_SEEDS, N_STEPS)
+simulate(*parameter_sample_list[0], RANDOMNESS, N_STEPS, manual_mode=False)
