@@ -80,7 +80,7 @@ def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
         # find the strains that are in node's current_infection but not in adj's current_infection
         infection_diff = network.nodes[node]['current_infection'] - network.nodes[adj]['current_infection']
         # if adj's current_infection has all of strains in node's current_infection, skip this adj
-        if len(infection_diff) == 0:
+        if not infection_diff:
             continue
         # arbitrarily select a strain from the strain difference
         infecting_strain = infection_diff.pop()
@@ -120,6 +120,24 @@ def record_host_immune(network, host_immune, n_nodes):
         immune_record[-1] = immune_record[-1] / n_nodes
 
 
+def record_strain_population(network, strain_population, strain_frequency, n_nodes):
+    total_population = 0
+    for population in strain_population.values():
+        population.append(0)
+    for frequency in strain_frequency.values():
+        frequency.append(0)
+    for n, v in network.nodes.items():
+        for strain in v['current_infection']:
+            strain_population[strain][-1] += 1
+            strain_frequency[strain][-1] += 1
+            total_population += 1
+    for population in strain_population.values():
+        population[-1] = population[-1] / n_nodes
+    if total_population > 0:
+        for frequency in strain_frequency.values():
+            frequency[-1] = frequency[-1] / total_population
+
+
 def calc_diversity(strain_freq):
     entropy = 0
     for freq in strain_freq.values():
@@ -145,19 +163,29 @@ def calc_discordance(strain_freq, n_loci):
             if strain1 != strain2:
                 numerator += hamming_dist(strain1, strain2, n_loci) * freq1 * freq2
                 denominator += freq1 * freq2
-    discordance = numerator / denominator / n_loci
+    if denominator == 0:
+        discordance = 0
+    else:
+        discordance = numerator / denominator / n_loci
     return discordance
 
 
-def seed(network, n_seeds, strain):
+def seed(network, strain):
     candidates = [n for n, v in network.nodes.items() if strain not in v['current_infection']]
-    sampled_nodes = sample(candidates, n_seeds)
-    for node in sampled_nodes:
-        network.nodes[node]['current_infection'].add(strain)
-        print('seeded', node, 'with', strain)
+    seed_node = choice(candidates)
+    network.nodes[seed_node]['current_infection'].add(strain)
+    print('seeded', seed_node, 'with', strain)
 
 
-def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps, seed_sequence=None):
+def check_extinction(network):
+    for n, v in network.nodes.items():
+        if v['current_infection']:
+            return False
+    return True
+
+
+def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps,
+             seed_sequence=None, plot=False):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
@@ -188,22 +216,32 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     # generate strain space
     strain_space = generate_strain_space(n_loci)
 
-    # initialize population record
+    # initialize host immune population record
     host_immune = {}
     for strain in strain_space:
         host_immune[strain] = []
+    # initialize strain frequency record
+    strain_frequency = {}
+    for strain in strain_space:
+        strain_frequency[strain] = []
+    # initialize strain population record
+    strain_population = {}
+    for strain in strain_space:
+        strain_population[strain] = []
 
     # default seeding if seed_sequence is not provided
     if not seed_sequence:
         # seed each strain in strain space to a host
         for strain_seed in strain_space:
-            seed(host_nw, 1, strain_seed)
+            seed(host_nw, strain_seed)
 
     # print('step 0')
     # print_network(host_nw)
 
-    # record strain population of step 0
+    # record host immune population of step 0
     record_host_immune(host_nw, host_immune, n_nodes)
+    # record strain population of step 0
+    record_strain_population(host_nw, strain_population, strain_frequency, n_nodes)
 
     # simulate
     for t in range(1, n_steps):
@@ -212,7 +250,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         # if in manual mode, seed another strain to the community at some time step
         if seed_sequence:
             if t == seed_sequence[0][0]:
-                seed(host_nw, 1, seed_sequence[0][1])
+                seed(host_nw, seed_sequence[0][1])
                 seed_sequence.pop(0)
 
         # records infection and memory changes in temporary data fields for each node
@@ -238,15 +276,45 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         # print_network(host_nw)
 
         record_host_immune(host_nw, host_immune, n_nodes)
+        record_strain_population(host_nw, strain_population, strain_frequency, n_nodes)
 
-    # plot
-    steps = range(n_steps)
-    for strain, host_immune_record in host_immune.items():
-        plt.plot(steps, host_immune_record, label=strain)
-    plt.legend()
-    plt.xlabel('Time steps')
-    plt.ylabel('Hosts immune to a strain')
-    plt.show()
+    # calculate mean diversity and discordance
+    diversity = []
+    discordance = []
+    for t in range(n_steps):
+        current_frequency = {}
+        for strain, frequency in strain_frequency.items():
+            current_frequency[strain] = frequency[t]
+        current_diversity = calc_diversity(current_frequency)
+        current_discordance = calc_discordance(current_frequency, n_loci)
+        diversity.append(current_diversity)
+        discordance.append(current_discordance)
+    mean_diversity = sum(diversity) / len(diversity)
+    mean_discordance = sum(discordance) / len(discordance)
+    print('mean_diversity', mean_diversity, 'mean_discordance', mean_discordance)
+
+    # plot if plot is True
+    if plot:
+        plt.subplot(211)
+        for strain, host_immune_record in host_immune.items():
+            plt.plot(range(n_steps), host_immune_record, label=strain)
+        plt.legend()
+        plt.xlabel('Time steps')
+        plt.ylabel('Hosts immune to a strain')
+
+        plt.subplot(212)
+        for strain, population in strain_population.items():
+            plt.plot(range(n_steps), population, label=strain)
+        plt.legend()
+        plt.xlabel('Time steps')
+        plt.ylabel('Strain population')
+        plt.ylim(0, 0.3)
+        plt.show()
+
+    if check_extinction(host_nw):
+        return None, None
+    else:
+        return mean_diversity, mean_discordance
 
 
 if __name__ == '__main__':
@@ -257,10 +325,10 @@ if __name__ == '__main__':
     BETA = 0.2  # infection probability
     R = 0.0  # recombination probability per allele
     TAO = 0.000  # mutation probability per allele
-    GAMMA = 3  # cross-immunity
-    N_LOCI = 3
+    GAMMA = 2  # cross-immunity
+    N_LOCI = 2
     N_NODES = 200
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
     N_STEPS = 2000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    simulate(*parameters, RANDOMNESS, N_STEPS, [[1,'00'], [200,'01']])
+    simulate(*parameters, RANDOMNESS, N_STEPS, seed_sequence=[[1, '00'], [750, '01']], plot=True)

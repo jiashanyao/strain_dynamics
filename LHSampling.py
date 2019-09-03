@@ -1,5 +1,7 @@
 import numpy as np
 from smt.sampling_methods import LHS
+import matplotlib.pyplot as plt
+import time
 
 from multistrain_model import simulate
 
@@ -15,7 +17,8 @@ N_LOCI = [2, 4]
 N_NODES = [100, 500]
 
 # fixed parameters
-RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
+RANDOM = 1  # edge reconnecting probability of 1
+REGULAR = 0     # edge reconnecting probability of 0
 N_STEPS = 2000
 
 # create multi-dimension parameter space
@@ -33,7 +36,7 @@ parameter_space = np.array([
 
 # LHSampling
 sampling = LHS(xlimits=parameter_space)
-n_sample_points = 50
+n_sample_points = 0
 parameter_samples = sampling(n_sample_points)
 
 # change numpy.array to python list
@@ -43,5 +46,44 @@ for sample in parameter_sample_list:
     sample[0] = int(round(sample[0]))
     sample[7] = int(round(sample[7]))
     sample[8] = int(round(sample[8]))
+
+# diversity and discordance records
+regular_diversity = []
+regular_discordance = []
+random_diversity = []
+random_discordance = []
+
 # simulate
-simulate(*parameter_sample_list[0], RANDOMNESS, N_STEPS)
+i = 0
+start_time = time.process_time()
+for sample in parameter_sample_list:
+    print('---------------------', i, 'of', n_sample_points, '--------------------')
+    i += 1
+    ran_div, ran_disc = simulate(*sample, RANDOM, N_STEPS)
+    reg_div, reg_disc = simulate(*sample, REGULAR, N_STEPS)
+    if ran_div and ran_disc and reg_div and reg_disc:
+        random_diversity.append(ran_div)
+        random_discordance.append(ran_disc)
+        regular_diversity.append(reg_div)
+        regular_discordance.append(reg_disc)
+print('finished in', time.process_time() - start_time, 'seconds')
+
+plt.subplot(121)
+plt.scatter(random_diversity, regular_diversity)
+plt.plot([0, 1], [0, 1])
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.xlabel('Diversity in random model')
+plt.ylabel('Diversity in regular model')
+plt.gca().set_aspect('equal', adjustable='box')
+
+plt.subplot(122)
+plt.scatter(random_discordance, regular_discordance)
+plt.plot([0.4, 1], [0.4, 1])
+plt.xlim(0.4, 1)
+plt.ylim(0.4, 1)
+plt.xlabel('Discordance in random model')
+plt.ylabel('Discordance in regular model')
+plt.gca().set_aspect('equal', adjustable='box')
+
+plt.show()
