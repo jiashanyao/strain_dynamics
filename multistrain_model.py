@@ -74,7 +74,7 @@ def check_mutation(strain, n_loci, tao):
 
 
 def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
-    if len(network.nodes[node]['current_infection']) == 0:
+    if not network.nodes[node]['current_infection']:
         return  # skip node that has no infection
     for adj in network.adj[node]:
         # find the strains that are in node's current_infection but not in adj's current_infection
@@ -170,11 +170,12 @@ def calc_discordance(strain_freq, n_loci):
     return discordance
 
 
-def seed(network, strain):
+def seed(network, strain, seeds_per_strain):
     candidates = [n for n, v in network.nodes.items() if strain not in v['current_infection']]
-    seed_node = choice(candidates)
-    network.nodes[seed_node]['current_infection'].add(strain)
-    print('seeded', seed_node, 'with', strain)
+    nodes = sample(candidates, seeds_per_strain)
+    for node in nodes:
+        network.nodes[node]['current_infection'].add(strain)
+        print('seeded', node, 'with', strain)
 
 
 def check_extinction(network):
@@ -184,8 +185,8 @@ def check_extinction(network):
     return True
 
 
-def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, randomness, n_steps,
-             seed_sequence=None, plot=False):
+def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, seeds_per_strain, randomness, n_steps,
+             seed_sequence=None, plot=False, save_fig=False):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
@@ -209,9 +210,11 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         v['newly_infected'] = set()     # temporary hold for newly infected strains
         v['newly_recovered'] = set()    # temporary hold for newly recovered strains
 
-    # if seed_sequence is provided, overwrite the n_loci with the provided strain length
+    # if seed_sequence is provided, overwrite n_loci with the provided strain length
+    # and overwrite seeds_per_strain with the provided seeds per strain
     if seed_sequence:
         n_loci = len(seed_sequence[0][1])
+        seeds_per_strain = seed_sequence[0][2]
 
     # generate strain space
     strain_space = generate_strain_space(n_loci)
@@ -233,7 +236,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     if not seed_sequence:
         # seed each strain in strain space to a host
         for strain_seed in strain_space:
-            seed(host_nw, strain_seed)
+            seed(host_nw, strain_seed, seeds_per_strain)
 
     # print('step 0')
     # print_network(host_nw)
@@ -250,7 +253,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         # if in manual mode, seed another strain to the community at some time step
         if seed_sequence:
             if t == seed_sequence[0][0]:
-                seed(host_nw, seed_sequence[0][1])
+                seed(host_nw, seed_sequence[0][1], seed_sequence[0][2])
                 seed_sequence.pop(0)
 
         # records infection and memory changes in temporary data fields for each node
@@ -299,6 +302,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         for strain, host_immune_record in host_immune.items():
             plt.plot(range(n_steps), host_immune_record, label=strain)
         plt.legend()
+        plt.ylim(0, 1)
         plt.xlabel('Time steps')
         plt.ylabel('Hosts immune to a strain')
 
@@ -306,10 +310,20 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         for strain, population in strain_population.items():
             plt.plot(range(n_steps), population, label=strain)
         plt.legend()
+        plt.ylim(0, 1)
         plt.xlabel('Time steps')
         plt.ylabel('Strain population')
-        plt.ylim(0, 0.3)
-        plt.show()
+
+        path = 'C:/Users/jiashany/Dropbox/unimelb/ComputingProject/report/images/'
+        filename = 'C' + str(contacts_per_host) + 'p' + str(randomness) + 'u' + str(mu) + 's' + str(sigma) \
+                   + 'b' + str(beta) + 'R' + str(r) + 't' + str(tao) + 'g' + str(gamma) + 'N' + str(n_loci) \
+                   + 'P' + str(n_nodes) + 'S' + str(seeds_per_strain)
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig(path + filename + '.png')
+            plt.savefig(path + filename + '.pdf')
+        else:
+            plt.show()
 
     if check_extinction(host_nw):
         return None, None
@@ -319,16 +333,18 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
 if __name__ == '__main__':
     # constants
-    CONTACTS_PER_HOST = 10
-    MU = 0.14  # recovery probability
-    SIGMA = 0.03  # immunity lost probability
-    BETA = 0.2  # infection probability
+    CONTACTS_PER_HOST = 8
+    MU = 0.1  # recovery probability
+    SIGMA = 0.0  # immunity lost probability
+    BETA = 0.1  # infection probability
     R = 0.0  # recombination probability per allele
     TAO = 0.000  # mutation probability per allele
     GAMMA = 2  # cross-immunity
     N_LOCI = 2
-    N_NODES = 200
+    N_NODES = 300
+    SEEDS_PER_STRAIN = 4
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-    N_STEPS = 2000
+    N_STEPS = 100
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    simulate(*parameters, RANDOMNESS, N_STEPS, seed_sequence=[[1, '00'], [750, '01']], plot=True)
+    seeding = [[1, '00', 4]]
+    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=seeding, plot=True, save_fig=True)

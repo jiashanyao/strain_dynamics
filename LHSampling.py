@@ -17,9 +17,10 @@ N_LOCI = [2, 4]
 N_NODES = [100, 500]
 
 # fixed parameters
+SEEDS_PER_STRAIN = 2
 RANDOM = 1  # edge reconnecting probability of 1
 REGULAR = 0     # edge reconnecting probability of 0
-N_STEPS = 2000
+N_STEPS = 3000
 
 # create multi-dimension parameter space
 parameter_space = np.array([
@@ -36,7 +37,7 @@ parameter_space = np.array([
 
 # LHSampling
 sampling = LHS(xlimits=parameter_space)
-n_sample_points = 0
+n_sample_points = 1000
 parameter_samples = sampling(n_sample_points)
 
 # change numpy.array to python list
@@ -57,11 +58,11 @@ random_discordance = []
 i = 0
 start_time = time.process_time()
 for sample in parameter_sample_list:
-    print('---------------------', i, 'of', n_sample_points, '--------------------')
-    i += 1
-    ran_div, ran_disc = simulate(*sample, RANDOM, N_STEPS)
-    reg_div, reg_disc = simulate(*sample, REGULAR, N_STEPS)
+    ran_div, ran_disc = simulate(*sample, SEEDS_PER_STRAIN, RANDOM, N_STEPS)
+    reg_div, reg_disc = simulate(*sample, SEEDS_PER_STRAIN, REGULAR, N_STEPS)
     if ran_div and ran_disc and reg_div and reg_disc:
+        print('---------------------', i, 'of', n_sample_points, '--------------------')
+        i += 1
         random_diversity.append(ran_div)
         random_discordance.append(ran_disc)
         regular_diversity.append(reg_div)

@@ -2,12 +2,12 @@ import networkx as nx
 from random import sample, random
 import matplotlib.pyplot as plt
 
-n_steps = 50
-n_nodes = 500
-k_nearest = 4
+n_steps = 100
+n_nodes = 300
+k_nearest = 8
 p_reconnect = 1
-beta = 0.3  # infection probability
-mu = 0.3  # recovery probability
+beta = 0.1  # infection probability
+mu = 0.1  # recovery probability
 n_seeds = 4
 
 
@@ -36,8 +36,8 @@ if __name__ == '__main__':
         host_nw.nodes[n]['status'] = 'i'
         host_nw.nodes[n]['next_status'] = 'i'
     print(host_nw.nodes.data())
-    S = [n_nodes - n_seeds]
-    I = [n_seeds]
+    S = [(n_nodes - n_seeds) / n_nodes]
+    I = [n_seeds / n_nodes]
     R = [0]
     for t in range(1, n_steps):
         # get the infectious nodes
@@ -57,9 +57,9 @@ if __name__ == '__main__':
         susceptible_nodes = [n for n, v in host_nw.nodes.items() if v['status'] == 's']
         infectious_nodes = [n for n, v in host_nw.nodes.items() if v['status'] == 'i']
         recovered_nodes = [n for n, v in host_nw.nodes.items() if v['status'] == 'r']
-        S.append(len(susceptible_nodes))
-        I.append(len(infectious_nodes))
-        R.append(len(recovered_nodes))
+        S.append(len(susceptible_nodes) / n_nodes)
+        I.append(len(infectious_nodes) / n_nodes)
+        R.append(len(recovered_nodes) / n_nodes)
     # plot
     steps = range(n_steps)
     plt.plot(steps, S, 'b', label='S')
@@ -68,5 +68,9 @@ if __name__ == '__main__':
     plt.legend()
     plt.xlabel('Time steps')
     plt.ylabel('Number of hosts')
-    plt.title('SIR model')
-    plt.show()
+    # plt.show()
+    path = 'C:/Users/jiashany/Dropbox/unimelb/ComputingProject/report/images/'
+    filename = 'C' + str(k_nearest) + 'p' + str(p_reconnect) + 'u' + str(mu) + 'b' + str(beta) + 'P' + str(n_nodes)\
+               + 'S' + str(n_seeds)
+    plt.savefig(path + filename + '.png')
+    plt.savefig(path + filename + '.pdf')
