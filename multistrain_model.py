@@ -94,7 +94,7 @@ def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
         # try infecting
         if random() < p_infect:
             infecting_strain = check_mutation(infecting_strain, n_loci, tao)
-            if len(network.nodes[adj]['current_infection']):
+            if network.nodes[adj]['current_infection']:
                 # if adj has current infection, do possible recombination
                 infected_strain = set(network.nodes[adj]['current_infection']).pop()
                 recombine_output = recombine(infected_strain, infecting_strain, n_loci, r)
@@ -196,6 +196,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     print('gamma', gamma)
     print('n_loci', n_loci)
     print('n_nodes', n_nodes)
+    print('seeds_per_strain', seeds_per_strain)
     print('randomness', randomness)
     print('n_steps', n_steps)
 
@@ -204,20 +205,28 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
     # data field setting
     for n, v in host_nw.nodes.items():
-        v['current_memory'] = set()     # actual memory
+        v['current_memory'] = set()  # actual memory
         v['current_infection'] = set()  # actual infected strains
-        v['newly_lost'] = set()         # temporary hold for newly lost strain immunity
-        v['newly_infected'] = set()     # temporary hold for newly infected strains
-        v['newly_recovered'] = set()    # temporary hold for newly recovered strains
+        v['newly_lost'] = set()  # temporary hold for newly lost strain immunity
+        v['newly_infected'] = set()  # temporary hold for newly infected strains
+        v['newly_recovered'] = set()  # temporary hold for newly recovered strains
 
     # if seed_sequence is provided, overwrite n_loci with the provided strain length
     # and overwrite seeds_per_strain with the provided seeds per strain
+    seed_sequence_copy = None
     if seed_sequence:
+        seed_sequence_copy = seed_sequence.copy()
         n_loci = len(seed_sequence[0][1])
         seeds_per_strain = seed_sequence[0][2]
 
     # generate strain space
     strain_space = generate_strain_space(n_loci)
+
+    # default seeding if seed_sequence is not provided
+    if not seed_sequence:
+        # seed each strain in strain space to a host
+        for strain_seed in strain_space:
+            seed(host_nw, strain_seed, seeds_per_strain)
 
     # initialize host immune population record
     host_immune = {}
@@ -232,18 +241,8 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     for strain in strain_space:
         strain_population[strain] = []
 
-    # default seeding if seed_sequence is not provided
-    if not seed_sequence:
-        # seed each strain in strain space to a host
-        for strain_seed in strain_space:
-            seed(host_nw, strain_seed, seeds_per_strain)
-
-    # print('step 0')
-    # print_network(host_nw)
-
-    # record host immune population of step 0
+    # record host immune population and strain population of step 0
     record_host_immune(host_nw, host_immune, n_nodes)
-    # record strain population of step 0
     record_strain_population(host_nw, strain_population, strain_frequency, n_nodes)
 
     # simulate
@@ -300,7 +299,12 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
     if plot:
         plt.subplot(211)
         for strain, host_immune_record in host_immune.items():
-            plt.plot(range(n_steps), host_immune_record, label=strain)
+            if seed_sequence_copy:
+                if strain in [s[1] for s in seed_sequence_copy]:
+                    plt.plot(range(n_steps), host_immune_record, label=strain)
+                    print('plot seed sequence')
+            else:
+                plt.plot(range(n_steps), host_immune_record, label=strain)
         plt.legend()
         plt.ylim(0, 1)
         plt.xlabel('Time steps')
@@ -308,7 +312,12 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
         plt.subplot(212)
         for strain, population in strain_population.items():
-            plt.plot(range(n_steps), population, label=strain)
+            if seed_sequence_copy:
+                if strain in [s[1] for s in seed_sequence_copy]:
+                    plt.plot(range(n_steps), population, label=strain)
+                    print("plot seed sequence")
+            else:
+                plt.plot(range(n_steps), population, label=strain)
         plt.legend()
         plt.ylim(0, 1)
         plt.xlabel('Time steps')
@@ -325,26 +334,41 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         else:
             plt.show()
 
+    # return results
+    result = {'contacts_per_host': contacts_per_host,
+              'mu': mu,
+              'sigma': sigma,
+              'beta': beta,
+              'r': r,
+              'tao': tao,
+              'gamma': gamma,
+              'n_loci': n_loci,
+              'n_nodes': n_nodes,
+              'seeds_per_strain': seeds_per_strain,
+              'randomness': randomness,
+              'n_steps': n_steps,
+              'mean_diversity': mean_diversity,
+              'mean_discordance': mean_discordance}
     if check_extinction(host_nw):
-        return None, None
+        return None
     else:
-        return mean_diversity, mean_discordance
+        return result
 
 
 if __name__ == '__main__':
     # constants
     CONTACTS_PER_HOST = 8
-    MU = 0.1  # recovery probability
-    SIGMA = 0.0  # immunity lost probability
-    BETA = 0.1  # infection probability
-    R = 0.0  # recombination probability per allele
+    MU = 0.2  # recovery probability
+    SIGMA = 0.05  # immunity lost probability
+    BETA = 0.5  # infection probability
+    R = 0.00  # recombination probability per allele
     TAO = 0.000  # mutation probability per allele
     GAMMA = 2  # cross-immunity
     N_LOCI = 2
     N_NODES = 300
     SEEDS_PER_STRAIN = 4
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-    N_STEPS = 100
+    N_STEPS = 1000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    seeding = [[1, '00', 4]]
+    seeding = [[1, '00000', 4], [250, '00001', 4]]
     simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=seeding, plot=True, save_fig=True)

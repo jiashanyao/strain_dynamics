@@ -1,7 +1,7 @@
 import numpy as np
 from smt.sampling_methods import LHS
 import matplotlib.pyplot as plt
-import time
+import time, multiprocessing, json
 
 from multistrain_model import simulate
 
@@ -22,69 +22,81 @@ RANDOM = 1  # edge reconnecting probability of 1
 REGULAR = 0     # edge reconnecting probability of 0
 N_STEPS = 3000
 
-# create multi-dimension parameter space
-parameter_space = np.array([
-    CONTACTS_PER_HOST,
-    MU,
-    SIGMA,
-    BETA,
-    R,
-    TAO,
-    GAMMA,
-    N_LOCI,
-    N_NODES
-])
+# result lists
+ran_result_list = []
+re_result_list = []
 
-# LHSampling
-sampling = LHS(xlimits=parameter_space)
-n_sample_points = 1000
-parameter_samples = sampling(n_sample_points)
 
-# change numpy.array to python list
-parameter_sample_list = parameter_samples.tolist()
-# round int parameters to int
-for sample in parameter_sample_list:
-    sample[0] = int(round(sample[0]))
-    sample[7] = int(round(sample[7]))
-    sample[8] = int(round(sample[8]))
+def log_ran_result(result):
+    if result:
+        ran_result_list.append(result)
 
-# diversity and discordance records
-regular_diversity = []
-regular_discordance = []
-random_diversity = []
-random_discordance = []
 
-# simulate
-i = 0
-start_time = time.process_time()
-for sample in parameter_sample_list:
-    ran_div, ran_disc = simulate(*sample, SEEDS_PER_STRAIN, RANDOM, N_STEPS)
-    reg_div, reg_disc = simulate(*sample, SEEDS_PER_STRAIN, REGULAR, N_STEPS)
-    if ran_div and ran_disc and reg_div and reg_disc:
-        print('---------------------', i, 'of', n_sample_points, '--------------------')
-        i += 1
-        random_diversity.append(ran_div)
-        random_discordance.append(ran_disc)
-        regular_diversity.append(reg_div)
-        regular_discordance.append(reg_disc)
-print('finished in', time.process_time() - start_time, 'seconds')
+def log_re_result(result):
+    if result:
+        re_result_list.append(result)
 
-plt.subplot(121)
-plt.scatter(random_diversity, regular_diversity)
-plt.plot([0, 1], [0, 1])
-plt.xlim(0, 1)
-plt.ylim(0, 1)
-plt.xlabel('Diversity in random model')
-plt.ylabel('Diversity in regular model')
-plt.gca().set_aspect('equal', adjustable='box')
 
-plt.subplot(122)
-plt.scatter(random_discordance, regular_discordance)
-plt.plot([0.4, 1], [0.4, 1])
-plt.xlim(0.4, 1)
-plt.ylim(0.4, 1)
-plt.xlabel('Discordance in random model')
-plt.ylabel('Discordance in regular model')
-plt.gca().set_aspect('equal', adjustable='box')
+if __name__ == '__main__':
+    # create multi-dimension parameter space
+    parameter_space = np.array([
+        CONTACTS_PER_HOST,
+        MU,
+        SIGMA,
+        BETA,
+        R,
+        TAO,
+        GAMMA,
+        N_LOCI,
+        N_NODES
+    ])
 
-plt.show()
+    # LHSampling
+    sampling = LHS(xlimits=parameter_space)
+    n_sample_points = 5
+    parameter_samples = sampling(n_sample_points)
+
+    # change numpy.array to python list
+    parameter_sample_list = parameter_samples.tolist()
+    # round int parameters to int
+    for sample in parameter_sample_list:
+        sample[0] = int(round(sample[0]))
+        sample[7] = int(round(sample[7]))
+        sample[8] = int(round(sample[8]))
+
+    # simulate
+    i = 0
+    start_time = time.process_time()
+    pool = multiprocessing.Pool()
+    for sample in parameter_sample_list:
+        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, RANDOM, N_STEPS), callback=log_ran_result)
+        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, REGULAR, N_STEPS), callback=log_re_result)
+    pool.close()
+    pool.join()
+    print('finished in', time.process_time() - start_time, 'seconds')
+    print(ran_result_list)
+    print(re_result_list)
+    with open('ran_result.json', 'w') as outfile:
+        json.dump(ran_result_list, outfile, indent=2)
+    with open('re_result.json', 'w') as outfile:
+        json.dump(re_result_list, outfile, indent=2)
+
+    # plt.subplot(121)
+    # plt.scatter(random_diversity, regular_diversity)
+    # plt.plot([0, 1], [0, 1])
+    # plt.xlim(0, 1)
+    # plt.ylim(0, 1)
+    # plt.xlabel('Diversity in random model')
+    # plt.ylabel('Diversity in regular model')
+    # plt.gca().set_aspect('equal', adjustable='box')
+    #
+    # plt.subplot(122)
+    # plt.scatter(random_discordance, regular_discordance)
+    # plt.plot([0.4, 1], [0.4, 1])
+    # plt.xlim(0.4, 1)
+    # plt.ylim(0.4, 1)
+    # plt.xlabel('Discordance in random model')
+    # plt.ylabel('Discordance in regular model')
+    # plt.gca().set_aspect('equal', adjustable='box')
+    #
+    # plt.show()
