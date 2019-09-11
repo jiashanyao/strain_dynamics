@@ -358,17 +358,17 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 if __name__ == '__main__':
     # constants
     CONTACTS_PER_HOST = 8
-    MU = 0.2  # recovery probability
-    SIGMA = 0.05  # immunity lost probability
-    BETA = 0.5  # infection probability
-    R = 0.00  # recombination probability per allele
+    MU = 1/3  # recovery probability
+    SIGMA = 1/10  # immunity lost probability
+    BETA = 0.2  # infection probability
+    R = 0.1  # recombination probability per allele
     TAO = 0.000  # mutation probability per allele
-    GAMMA = 2  # cross-immunity
+    GAMMA = 4  # cross-immunity
     N_LOCI = 2
     N_NODES = 300
     SEEDS_PER_STRAIN = 4
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
     N_STEPS = 1000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    seeding = [[1, '00000', 4], [250, '00001', 4]]
-    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=seeding, plot=True, save_fig=True)
+    seeding = [[1, '00', 4], [2, '01', 4]]
+    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=seeding, plot=True, save_fig=False)

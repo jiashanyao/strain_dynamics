@@ -1,6 +1,5 @@
 import numpy as np
 from smt.sampling_methods import LHS
-import matplotlib.pyplot as plt
 import time, multiprocessing, json
 
 from multistrain_model import simulate
@@ -17,7 +16,7 @@ N_LOCI = [2, 4]
 N_NODES = [100, 500]
 
 # fixed parameters
-SEEDS_PER_STRAIN = 2
+SEEDS_PER_STRAIN = 4
 RANDOM = 1  # edge reconnecting probability of 1
 REGULAR = 0     # edge reconnecting probability of 0
 N_STEPS = 3000
@@ -53,7 +52,7 @@ if __name__ == '__main__':
 
     # LHSampling
     sampling = LHS(xlimits=parameter_space)
-    n_sample_points = 5
+    n_sample_points = 1000
     parameter_samples = sampling(n_sample_points)
 
     # change numpy.array to python list
@@ -64,8 +63,7 @@ if __name__ == '__main__':
         sample[7] = int(round(sample[7]))
         sample[8] = int(round(sample[8]))
 
-    # simulate
-    i = 0
+    # simulate and write results to file
     start_time = time.process_time()
     pool = multiprocessing.Pool()
     for sample in parameter_sample_list:
@@ -80,23 +78,3 @@ if __name__ == '__main__':
         json.dump(ran_result_list, outfile, indent=2)
     with open('re_result.json', 'w') as outfile:
         json.dump(re_result_list, outfile, indent=2)
-
-    # plt.subplot(121)
-    # plt.scatter(random_diversity, regular_diversity)
-    # plt.plot([0, 1], [0, 1])
-    # plt.xlim(0, 1)
-    # plt.ylim(0, 1)
-    # plt.xlabel('Diversity in random model')
-    # plt.ylabel('Diversity in regular model')
-    # plt.gca().set_aspect('equal', adjustable='box')
-    #
-    # plt.subplot(122)
-    # plt.scatter(random_discordance, regular_discordance)
-    # plt.plot([0.4, 1], [0.4, 1])
-    # plt.xlim(0.4, 1)
-    # plt.ylim(0.4, 1)
-    # plt.xlabel('Discordance in random model')
-    # plt.ylabel('Discordance in regular model')
-    # plt.gca().set_aspect('equal', adjustable='box')
-    #
-    # plt.show()
