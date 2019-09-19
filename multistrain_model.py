@@ -48,14 +48,18 @@ def calc_bit_fraction(memory, infect_strain, n_loci):
 def recombine(strain1, strain2, n_loci, r):
     char_list1 = list(strain1)
     char_list2 = list(strain2)
+    char_list3 = []
+    char_list4 = []
     for i in range(n_loci):
         if random() < r:
-            tmp = char_list1[i]
-            char_list1[i] = char_list2[i]
-            char_list2[i] = tmp
-    strain1 = ''.join(char_list1)
-    strain2 = ''.join(char_list2)
-    return strain1, strain2
+            char_list3.append(char_list2[i])
+            char_list4.append(char_list1[i])
+        else:
+            char_list3.append(char_list1[i])
+            char_list4.append(char_list2[i])
+    strain3 = ''.join(char_list3)
+    strain4 = ''.join(char_list4)
+    return strain1, strain2, strain3, strain4
 
 
 def mutate(allele):
@@ -297,7 +301,8 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
     # plot if plot is True
     if plot:
-        plt.subplot(211)
+        plt.figure(figsize=(4, 3))
+        # plt.subplot(211)
         for strain, host_immune_record in host_immune.items():
             if seed_sequence_copy:
                 if strain in [s[1] for s in seed_sequence_copy]:
@@ -307,21 +312,22 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
                 plt.plot(range(n_steps), host_immune_record, label=strain)
         plt.legend()
         plt.ylim(0, 1)
+        plt.xlim(0, n_steps)
         plt.xlabel('Time steps')
         plt.ylabel('Hosts immune to a strain')
 
-        plt.subplot(212)
-        for strain, population in strain_population.items():
-            if seed_sequence_copy:
-                if strain in [s[1] for s in seed_sequence_copy]:
-                    plt.plot(range(n_steps), population, label=strain)
-                    print("plot seed sequence")
-            else:
-                plt.plot(range(n_steps), population, label=strain)
-        plt.legend()
-        plt.ylim(0, 1)
-        plt.xlabel('Time steps')
-        plt.ylabel('Strain population')
+        # plt.subplot(212)
+        # for strain, population in strain_population.items():
+        #     if seed_sequence_copy:
+        #         if strain in [s[1] for s in seed_sequence_copy]:
+        #             plt.plot(range(n_steps), population, label=strain)
+        #             print("plot seed sequence")
+        #     else:
+        #         plt.plot(range(n_steps), population, label=strain)
+        # plt.legend()
+        # plt.ylim(0, 1)
+        # plt.xlabel('Time steps')
+        # plt.ylabel('Strain population')
 
         path = 'C:/Users/jiashany/Dropbox/unimelb/ComputingProject/report/images/'
         filename = 'C' + str(contacts_per_host) + 'p' + str(randomness) + 'u' + str(mu) + 's' + str(sigma) \
@@ -357,18 +363,18 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
 if __name__ == '__main__':
     # constants
-    CONTACTS_PER_HOST = 8
-    MU = 1/3  # recovery probability
-    SIGMA = 1/10  # immunity lost probability
-    BETA = 0.2  # infection probability
-    R = 0.1  # recombination probability per allele
-    TAO = 0.000  # mutation probability per allele
-    GAMMA = 4  # cross-immunity
+    CONTACTS_PER_HOST = 12
+    MU = 0.3  # recovery probability
+    SIGMA = 0.04  # immunity lost probability
+    BETA = 0.5  # infection probability
+    R = 0.01  # recombination probability per allele
+    TAO = 0.001  # mutation probability per allele
+    GAMMA = 2  # cross-immunity
     N_LOCI = 2
     N_NODES = 300
-    SEEDS_PER_STRAIN = 4
+    SEEDS_PER_STRAIN = 1
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
-    N_STEPS = 1000
+    N_STEPS = 2000
     parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
-    seeding = [[1, '00', 4], [2, '01', 4]]
-    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=seeding, plot=True, save_fig=False)
+    seeding = [[1, '00', 4]]
+    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=None, plot=True, save_fig=True)

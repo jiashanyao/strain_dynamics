@@ -1,59 +1,37 @@
-import numpy as np
+import multiprocessing, json, numpy
 from smt.sampling_methods import LHS
-import time, multiprocessing, json
-
 from multistrain_model import simulate
 
-# parameter range
-CONTACTS_PER_HOST = [4, 12]
-MU = [1/10, 1/3]  # recovery probability
-SIGMA = [1/30, 1/10]  # immunity lost probability
-BETA = [0.2, 0.8]  # infection probability
-R = [0.01, 0.1]  # recombination probability per allele
-TAO = [0.001, 0.005]  # mutation probability per allele
-GAMMA = [0.02, 4]  # cross-immunity
-N_LOCI = [2, 4]
-N_NODES = [100, 500]
-
 # fixed parameters
-SEEDS_PER_STRAIN = 4
+SEEDS_PER_STRAIN = 1
 RANDOM = 1  # edge reconnecting probability of 1
-REGULAR = 0     # edge reconnecting probability of 0
+REGULAR = 0  # edge reconnecting probability of 0
 N_STEPS = 3000
-
-# result lists
-ran_result_list = []
-re_result_list = []
+N_SAMPLE_POINTS = 1000
 
 
-def log_ran_result(result):
+def log_ran_result(result, result_list):
     if result:
-        ran_result_list.append(result)
+        result_list.append(result)
 
 
-def log_re_result(result):
-    if result:
-        re_result_list.append(result)
-
-
-if __name__ == '__main__':
+def run_lhs(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, ran_filename, re_filename):
     # create multi-dimension parameter space
-    parameter_space = np.array([
-        CONTACTS_PER_HOST,
-        MU,
-        SIGMA,
-        BETA,
-        R,
-        TAO,
-        GAMMA,
-        N_LOCI,
-        N_NODES
+    parameter_space = numpy.array([
+        contacts_per_host,
+        mu,
+        sigma,
+        beta,
+        r,
+        tao,
+        gamma,
+        n_loci,
+        n_nodes
     ])
 
     # LHSampling
     sampling = LHS(xlimits=parameter_space)
-    n_sample_points = 1000
-    parameter_samples = sampling(n_sample_points)
+    parameter_samples = sampling(N_SAMPLE_POINTS)
 
     # change numpy.array to python list
     parameter_sample_list = parameter_samples.tolist()
@@ -64,17 +42,30 @@ if __name__ == '__main__':
         sample[8] = int(round(sample[8]))
 
     # simulate and write results to file
-    start_time = time.process_time()
     pool = multiprocessing.Pool()
+    ran_result_list = []
+    re_result_list = []
     for sample in parameter_sample_list:
-        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, RANDOM, N_STEPS), callback=log_ran_result)
-        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, REGULAR, N_STEPS), callback=log_re_result)
+        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, RANDOM, N_STEPS), callback=lambda result: log_ran_result(result, ran_result_list))
+        pool.apply_async(simulate, args=(*sample, SEEDS_PER_STRAIN, REGULAR, N_STEPS), callback=lambda result: log_ran_result(result, re_result_list))
     pool.close()
     pool.join()
-    print('finished in', time.process_time() - start_time, 'seconds')
-    print(ran_result_list)
-    print(re_result_list)
-    with open('ran_result.json', 'w') as outfile:
+    with open(ran_filename, 'w') as outfile:
         json.dump(ran_result_list, outfile, indent=2)
-    with open('re_result.json', 'w') as outfile:
+    with open(re_filename, 'w') as outfile:
         json.dump(re_result_list, outfile, indent=2)
+
+
+if __name__ == '__main__':
+    # parameter range
+    contacts_per_host = [4, 12]
+    mu = [1 / 10, 1 / 2]  # recovery probability
+    sigma = [1 / 30, 1 / 10]  # immunity lost probability
+    beta = [0.2, 0.8]  # infection probability
+    r = [0.001, 0.1]  # recombination probability per allele
+    tao = [0.001, 0.005]  # mutation probability per allele
+    gamma = [0.02, 10]  # cross-immunity
+    n_loci = [2, 4]
+    n_nodes = [100, 500]
+    run_lhs(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
+            'ran_mu=0.1-0.5_r=0.001-0.1_gamma=0.02-10.json', 're_mu=0.1-0.5_r=0.001-0.1_gamma=0.02-10.json')
