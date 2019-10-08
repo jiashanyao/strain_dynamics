@@ -45,21 +45,19 @@ def calc_bit_fraction(memory, infect_strain, n_loci):
     return identical_bits / n_loci
 
 
-def recombine(strain1, strain2, n_loci, r):
-    char_list1 = list(strain1)
-    char_list2 = list(strain2)
-    char_list3 = []
-    char_list4 = []
+def recombine(infecting_strain, infected_strain_set, n_loci, r):
+    infecting_char_list = list(infecting_strain)
+    infected_char_lists = []
+    for strain in infected_strain_set:
+        infected_char_lists.append(list(strain))
     for i in range(n_loci):
         if random() < r:
-            char_list3.append(char_list2[i])
-            char_list4.append(char_list1[i])
-        else:
-            char_list3.append(char_list1[i])
-            char_list4.append(char_list2[i])
-    strain3 = ''.join(char_list3)
-    strain4 = ''.join(char_list4)
-    return strain1, strain2, strain3, strain4
+            recombined_strain = choice(infected_char_lists)
+            infecting_char_list[i], recombined_strain[i] = recombined_strain[i], infecting_char_list[i]
+    out_strains = [''.join(infecting_char_list)]
+    for strain in infected_char_lists:
+        out_strains.append(''.join(strain))
+    return out_strains
 
 
 def mutate(allele):
@@ -77,7 +75,7 @@ def check_mutation(strain, n_loci, tao):
     return ''.join(char_list)
 
 
-def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
+def infect_adjacent(network, node, n_loci, gamma, beta, tau, r):
     if not network.nodes[node]['current_infection']:
         return  # skip node that has no infection
     for adj in network.adj[node]:
@@ -97,11 +95,11 @@ def infect_adjacent(network, node, n_loci, gamma, beta, tao, r):
 
         # try infecting
         if random() < p_infect:
-            infecting_strain = check_mutation(infecting_strain, n_loci, tao)
+            infecting_strain = check_mutation(infecting_strain, n_loci, tau)
             if network.nodes[adj]['current_infection']:
                 # if adj has current infection, do possible recombination
-                infected_strain = set(network.nodes[adj]['current_infection']).pop()
-                recombine_output = recombine(infected_strain, infecting_strain, n_loci, r)
+                infected_strain_set = set(network.nodes[adj]['current_infection'])
+                recombine_output = recombine(infecting_strain, infected_strain_set, n_loci, r)
                 network.nodes[adj]['newly_infected'].update(recombine_output)
             else:
                 # else no recombination
@@ -189,14 +187,14 @@ def check_extinction(network):
     return True
 
 
-def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes, seeds_per_strain, randomness, n_steps,
+def simulate(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes, seeds_per_strain, randomness, n_steps,
              seed_sequence=None, plot=False, save_fig=False):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
     print('beta', beta)
     print('r', r)
-    print('tao', tao)
+    print('tao', tau)
     print('gamma', gamma)
     print('n_loci', n_loci)
     print('n_nodes', n_nodes)
@@ -263,7 +261,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         for n, v in host_nw.nodes.items():
             v['newly_lost'] = check_immunity_lost(n, v['current_memory'], sigma)
             v['newly_recovered'] = check_recovery(n, v['current_infection'], mu)
-            infect_adjacent(host_nw, n, n_loci, gamma, beta, tao, r)
+            infect_adjacent(host_nw, n, n_loci, gamma, beta, tau, r)
 
         # print('before update:')
         # print_network(host_nw)
@@ -329,11 +327,11 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
         # plt.xlabel('Time steps')
         # plt.ylabel('Strain population')
 
-        path = 'C:/Users/jiashany/Dropbox/unimelb/ComputingProject/report/images/'
-        filename = 'C' + str(contacts_per_host) + 'p' + str(randomness) + 'u' + str(mu) + 's' + str(sigma) \
-                   + 'b' + str(beta) + 'R' + str(r) + 't' + str(tao) + 'g' + str(gamma) + 'N' + str(n_loci) \
-                   + 'P' + str(n_nodes) + 'S' + str(seeds_per_strain)
         plt.tight_layout()
+        plt.title('diversity={:.2f} discordance={:.2f}'.format(mean_diversity, mean_discordance))
+        path = 'C:/Users/jiashany/Dropbox/unimelb/ComputingProject/report/images/'
+        filename = 'C{}_p{}_mu{:.2f}_sigma{:.2f}_beta{:.2f}_R{:.2f}_tau{:.3f}_gamma{:.2f}_N{}_P{}_S{}'.format(
+            contacts_per_host, randomness, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes, seeds_per_strain)
         if save_fig:
             plt.savefig(path + filename + '.png')
             plt.savefig(path + filename + '.pdf')
@@ -346,7 +344,7 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
               'sigma': sigma,
               'beta': beta,
               'r': r,
-              'tao': tao,
+              'tau': tau,
               'gamma': gamma,
               'n_loci': n_loci,
               'n_nodes': n_nodes,
@@ -363,18 +361,18 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tao, gamma, n_loci, n_nodes,
 
 if __name__ == '__main__':
     # constants
-    CONTACTS_PER_HOST = 12
-    MU = 0.3  # recovery probability
-    SIGMA = 0.04  # immunity lost probability
-    BETA = 0.5  # infection probability
+    CONTACTS_PER_HOST = 8
+    MU = 1/4  # recovery probability
+    SIGMA = 1/20  # immunity lost probability
+    BETA = 0.3  # infection probability
     R = 0.01  # recombination probability per allele
-    TAO = 0.001  # mutation probability per allele
-    GAMMA = 2  # cross-immunity
-    N_LOCI = 2
+    TAU = 0.002  # mutation probability per allele
+    GAMMA = 4  # cross-immunity
+    N_LOCI = 3
     N_NODES = 300
     SEEDS_PER_STRAIN = 1
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
     N_STEPS = 2000
-    parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAO, GAMMA, N_LOCI, N_NODES]
+    parameters = [CONTACTS_PER_HOST, MU, SIGMA, BETA, R, TAU, GAMMA, N_LOCI, N_NODES]
     seeding = [[1, '00', 4]]
-    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=None, plot=True, save_fig=True)
+    simulate(*parameters, SEEDS_PER_STRAIN, RANDOMNESS, N_STEPS, seed_sequence=None, plot=True, save_fig=False)
