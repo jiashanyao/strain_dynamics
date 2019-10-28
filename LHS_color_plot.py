@@ -19,7 +19,7 @@ result = []
 for i in range(len(ran_result)):
     result.append({'ran': ran_result[i], 're': re_result[i]})
 shuffle(result)  # shuffle the list to minimize the impact of scatter overlay problem
-parameter_list = ['contacts_per_host', 'mu', 'sigma', 'beta', 'r', 'tau', 'gamma', 'n_loci', 'n_nodes']
+parameter_list = ['contacts_per_host', 'mu', 'sigma', 'beta', 'r', 'gamma', 'n_loci', 'n_nodes']
 for parameter in parameter_list:
 
     plt.figure(figsize=(8, 4))

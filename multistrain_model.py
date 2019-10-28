@@ -188,7 +188,7 @@ def check_extinction(network):
 
 
 def simulate(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes, seeds_per_strain, randomness, n_steps,
-             seed_sequence=None, plot=False, save_fig=False):
+             seed_sequence=None, plot=False, save_fig=False, row=0, col=0):
     print('contacts_per_host', contacts_per_host)
     print('mu', mu)
     print('sigma', sigma)
@@ -350,9 +350,12 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes,
               'n_nodes': n_nodes,
               'seeds_per_strain': seeds_per_strain,
               'randomness': randomness,
+              'cluster_coefficient': nx.average_clustering(host_nw),
               'n_steps': n_steps,
               'mean_diversity': mean_diversity,
-              'mean_discordance': mean_discordance}
+              'mean_discordance': mean_discordance,
+              'row': row,
+              'col': col}
     if check_extinction(host_nw):
         return None
     else:
@@ -363,12 +366,12 @@ if __name__ == '__main__':
     # constants
     CONTACTS_PER_HOST = 8
     MU = 1/4  # recovery probability
-    SIGMA = 1/20  # immunity lost probability
-    BETA = 0.3  # infection probability
+    SIGMA = 1/30  # immunity lost probability
+    BETA = 0.4  # infection probability
     R = 0.01  # recombination probability per allele
-    TAU = 0.002  # mutation probability per allele
+    TAU = 0.001  # mutation probability per allele
     GAMMA = 4  # cross-immunity
-    N_LOCI = 3
+    N_LOCI = 2
     N_NODES = 300
     SEEDS_PER_STRAIN = 1
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability

@@ -20,8 +20,8 @@ if __name__ == '__main__':
     print(gamma_samples)
     # constants
     CONTACTS_PER_HOST = 8
-    MU = 1/4  # recovery probability
-    SIGMA = 1/20  # immunity lost probability
+    MU = 1/5  # recovery probability
+    SIGMA = 1/15  # immunity lost probability
     BETA = 0.5  # infection probability
     R = 0.01  # recombination probability per allele
     TAU = 0.001  # mutation probability per allele

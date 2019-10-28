@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import json
-from random import shuffle
 
 with open('ran_new_recombination.json') as infile:
     ran_result = json.load(infile)
@@ -18,7 +17,6 @@ re_result.sort(key=lambda d: d['beta'])
 result = []
 for i in range(len(ran_result)):
     result.append({'ran': ran_result[i], 're': re_result[i]})
-shuffle(result)  # shuffle the list to minimize the impact of scatter overlay problem
 
 plt.figure(figsize=(8, 4))
 plt.subplot(121)

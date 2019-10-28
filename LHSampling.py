@@ -7,7 +7,7 @@ SEEDS_PER_STRAIN = 1
 RANDOM = 1  # edge reconnecting probability of 1
 REGULAR = 0  # edge reconnecting probability of 0
 N_STEPS = 3000
-N_SAMPLE_POINTS = 1000
+N_SAMPLE_POINTS = 2000
 
 
 def log_result(result, result_list):
@@ -71,4 +71,4 @@ if __name__ == '__main__':
     n_loci = [2, 4]
     n_nodes = [100, 500]
     run_lhs(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes,
-            'ran_new_recombination.json', 're_new_recombination.json')
+            'ran_new_infection.json', 're_new_infection.json')
