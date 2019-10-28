@@ -1,0 +1,50 @@
+[
+  {
+    "contacts_per_host": 8,
+    "mu": 0.17,
+    "sigma": 0.08000000000000002,
+    "beta": 0.26,
+    "r": 0.05500000000000001,
+    "tao": 0.0022,
+    "gamma": 2.806,
+    "n_loci": 3,
+    "n_nodes": 220,
+    "seeds_per_strain": 4,
+    "randomness": 0,
+    "n_steps": 3000,
+    "mean_diversity": 0.8370349838879237,
+    "mean_discordance": 0.5709144263389414
+  },
+  {
+    "contacts_per_host": 11,
+    "mu": 0.21666666666666667,
+    "sigma": 0.053333333333333344,
+    "beta": 0.5,
+    "r": 0.037000000000000005,
+    "tao": 0.0038000000000000004,
+    "gamma": 3.602,
+    "n_loci": 4,
+    "n_nodes": 460,
+    "seeds_per_strain": 4,
+    "randomness": 0,
+    "n_steps": 3000,
+    "mean_diversity": 0.7577199158536758,
+    "mean_discordance": 0.5033463232421124
+  },
+  {
+    "contacts_per_host": 10,
+    "mu": 0.12333333333333334,
+    "sigma": 0.06666666666666668,
+    "beta": 0.7400000000000002,
+    "r": 0.09100000000000001,
+    "tao": 0.003,
+    "gamma": 0.41800000000000004,
+    "n_loci": 3,
+    "n_nodes": 300,
+    "seeds_per_strain": 4,
+    "randomness": 0,
+    "n_steps": 3000,
+    "mean_diversity": 0.9899763453653101,
+    "mean_discordance": 0.5705861382068197
+  }
+]
