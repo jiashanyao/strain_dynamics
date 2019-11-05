@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import json
 from random import shuffle
 
-with open('ran_new_recombination.json') as infile:
+with open('ran_gamma=0.02-20_u=2-10_c=8-12.json') as infile:
     ran_result = json.load(infile)
-with open('re_new_recombination.json') as infile:
+with open('re_gamma=0.02-20_u=2-10_c=8-12.json') as infile:
     re_result = json.load(infile)
 
 # pre-process the data: trim uncommon entries and sort the trim results to match ran_result and re_result
@@ -22,7 +22,7 @@ shuffle(result)  # shuffle the list to minimize the impact of scatter overlay pr
 parameter_list = ['contacts_per_host', 'mu', 'sigma', 'beta', 'r', 'gamma', 'n_loci', 'n_nodes']
 for parameter in parameter_list:
 
-    plt.figure(figsize=(8, 4))
+    plt.figure(figsize=(7, 3))
     plt.subplot(121)
     ran_div = [d['ran']['mean_diversity'] for d in result]
     re_div = [d['re']['mean_diversity'] for d in result]

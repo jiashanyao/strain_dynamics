@@ -51,5 +51,6 @@ if __name__ == '__main__':
     plt.xlim(min_dur, max_dur)
     plt.ylim(0, 1)
     plt.legend()
-    plt.xlabel('infection duration')
+    plt.xlabel('Infection duration')
+    plt.tight_layout()
     plt.show()

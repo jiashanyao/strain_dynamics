@@ -350,7 +350,8 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes,
               'n_nodes': n_nodes,
               'seeds_per_strain': seeds_per_strain,
               'randomness': randomness,
-              'cluster_coefficient': nx.average_clustering(host_nw),
+              'cluster_coefficient': nx.average_clustering(host_nw) / nx.average_clustering(
+                  nx.connected_watts_strogatz_graph(n_nodes, contacts_per_host, 0)),
               'n_steps': n_steps,
               'mean_diversity': mean_diversity,
               'mean_discordance': mean_discordance,
@@ -364,15 +365,15 @@ def simulate(contacts_per_host, mu, sigma, beta, r, tau, gamma, n_loci, n_nodes,
 
 if __name__ == '__main__':
     # constants
-    CONTACTS_PER_HOST = 8
+    CONTACTS_PER_HOST = 12
     MU = 1/4  # recovery probability
-    SIGMA = 1/30  # immunity lost probability
-    BETA = 0.4  # infection probability
-    R = 0.01  # recombination probability per allele
-    TAU = 0.001  # mutation probability per allele
+    SIGMA = 1/23  # immunity lost probability
+    BETA = 0.25  # infection probability
+    R = 0.1  # recombination probability per allele
+    TAU = 0.004  # mutation probability per allele
     GAMMA = 4  # cross-immunity
     N_LOCI = 2
-    N_NODES = 300
+    N_NODES = 223
     SEEDS_PER_STRAIN = 1
     RANDOMNESS = 1  # host contact network randomness, edge reconnecting probability
     N_STEPS = 2000

@@ -1,5 +1,4 @@
 import multiprocessing
-from matplotlib import pyplot as plt
 from multistrain_model import simulate
 import json
 

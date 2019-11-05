@@ -61,3 +61,4 @@ if __name__ == '__main__':
     plt.ylim(0, 1)
     plt.legend()
     plt.show()
+    plt.tight_layout()

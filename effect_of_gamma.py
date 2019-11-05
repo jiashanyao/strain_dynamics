@@ -22,7 +22,7 @@ if __name__ == '__main__':
     CONTACTS_PER_HOST = 8
     MU = 1/5  # recovery probability
     SIGMA = 1/15  # immunity lost probability
-    BETA = 0.5  # infection probability
+    BETA = 0.8  # infection probability
     R = 0.01  # recombination probability per allele
     TAU = 0.001  # mutation probability per allele
     GAMMA = 4  # cross-immunity
@@ -51,5 +51,6 @@ if __name__ == '__main__':
     plt.xlim(min_gamma, max_gamma)
     plt.ylim(0, 1)
     plt.legend()
-    plt.xlabel('degree of cross-immunity')
+    plt.xlabel('Degree of cross-immunity')
+    plt.tight_layout()
     plt.show()

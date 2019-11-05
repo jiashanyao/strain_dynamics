@@ -51,5 +51,6 @@ if __name__ == '__main__':
     plt.xlim(min_beta, max_beta)
     plt.ylim(0, 1)
     plt.legend()
-    plt.xlabel('transmission probability')
+    plt.xlabel('Infection probability')
+    plt.tight_layout()
     plt.show()

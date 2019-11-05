@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import json
 
-with open('ran_new_recombination.json') as infile:
+with open('ran_gamma=0.02-20_u=2-10_c=8-12.json') as infile:
     ran_result = json.load(infile)
-with open('re_new_recombination.json') as infile:
+with open('re_gamma=0.02-20_u=2-10_c=8-12.json') as infile:
     re_result = json.load(infile)
 
 # pre-process the data: trim uncommon entries and sort the trim results to match ran_result and re_result
@@ -17,8 +17,9 @@ re_result.sort(key=lambda d: d['beta'])
 result = []
 for i in range(len(ran_result)):
     result.append({'ran': ran_result[i], 're': re_result[i]})
+print(len(result))
 
-plt.figure(figsize=(8, 4))
+plt.figure(figsize=(6, 3))
 plt.subplot(121)
 ran_div = [d['ran']['mean_diversity'] for d in result]
 re_div = [d['re']['mean_diversity'] for d in result]
